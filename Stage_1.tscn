@@ -1,0 +1,92 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://Scripts/Player.gd" type="Script" id=1]
+[ext_resource path="res://Sprites/player.png" type="Texture" id=2]
+[ext_resource path="res://RigidWall.tscn" type="PackedScene" id=3]
+
+[sub_resource type="GDScript" id=1]
+resource_name = "WallSpawner"
+script/source = "extends Node
+
+export(PackedScene) var pre_wall
+
+var gap = 16 * 20
+
+var prevGapY = -1
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	prevGapY = generateGapPosition()
+	set_process(true)
+
+func generateGapPosition():
+	if prevGapY != -1:
+		var minY = 90
+		var maxY = int(get_viewport().size.y) - minY * 2
+		var maxDelta = 100
+		var newPos = randi() % maxY + minY
+		while abs(newPos - prevGapY) > maxDelta:
+			newPos = (randi() % maxY) + minY
+		return newPos
+	else:
+		return get_viewport().size.y * 0.5
+
+func generateGapSize():
+	return randi() % 50 + 150
+
+func _on_spawn_timer_timeout():
+	var wallTop = pre_wall.instance()
+	var wallBottom = pre_wall.instance()
+	wallTop.rotation = deg2rad(180)
+	
+	var yGap = generateGapPosition()
+	
+	#get half because it will be used on 2 walls
+	var gapSize = generateGapSize() * 0.5 
+	prevGapY = yGap
+	
+	var x = get_viewport().size.x + 30
+	var yTop = yGap - gapSize
+	var yBottom = yGap + gapSize
+	wallTop.position = Vector2(x, yTop)
+	wallBottom.position = Vector2(x, yBottom)
+	
+	get_parent().add_child(wallTop)
+	get_parent().add_child(wallBottom)
+	pass # Replace with function body.
+"
+
+[sub_resource type="RectangleShape2D" id=2]
+extents = Vector2( 543.072, 126.83 )
+
+[node name="Node2D" type="Node2D"]
+
+[node name="Player" type="KinematicBody2D" parent="."]
+editor/display_folded = true
+position = Vector2( 465.639, 324.892 )
+scale = Vector2( 0.5, 0.5 )
+script = ExtResource( 1 )
+
+[node name="Sprite" type="Sprite" parent="Player"]
+texture = ExtResource( 2 )
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Player"]
+polygon = PoolVector2Array( 0.417542, -44.3313, 16.0605, -16.6005, 48.7685, -10.9122, 26.3707, 12.9078, 30.9924, 47.3934, 0.0620193, 31.7505, -30.5129, 47.3934, -25.1801, 13.2633, -47.9335, -10.5567, -14.8699, -16.9561 )
+
+[node name="WallSpawner" type="Node" parent="."]
+script = SubResource( 1 )
+pre_wall = ExtResource( 3 )
+
+[node name="Timer" type="Timer" parent="WallSpawner"]
+wait_time = 2.0
+autostart = true
+
+[node name="Deadzones" type="Node2D" parent="."]
+editor/display_folded = true
+
+[node name="Area2D" type="Area2D" parent="Deadzones"]
+editor/display_folded = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Deadzones/Area2D"]
+position = Vector2( 522.647, 728.133 )
+shape = SubResource( 2 )
+[connection signal="timeout" from="WallSpawner/Timer" to="WallSpawner" method="_on_spawn_timer_timeout"]
